@@ -1,16 +1,13 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Journey to Freedom | Cinematic Experience</title>
-    <!-- GSAP CDN -->
+    <title>Journey to Freedom | Anime Cinematic</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js">
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js">
     </script>
-    <!-- Three.js CDN -->
     <script type="importmap">
         {
             "imports": {
@@ -25,17 +22,13 @@
             padding: 0;
             box-sizing: border-box;
         }
-
         body {
             font-family: 'Georgia', 'Times New Roman', serif;
             overflow-x: hidden;
             background: #000;
             color: white;
-            cursor: default;
             user-select: none;
-            -webkit-user-select: none;
         }
-
         #canvas-container {
             position: fixed;
             top: 0;
@@ -44,8 +37,6 @@
             height: 100vh;
             z-index: 0;
         }
-
-        /* Loading Screen */
         #loading-screen {
             position: fixed;
             inset: 0;
@@ -75,8 +66,6 @@
             border-radius: 2px;
             transition: width 0.3s ease;
         }
-
-        /* Overlay UI */
         #ui-overlay {
             position: fixed;
             bottom: 30px;
@@ -99,47 +88,11 @@
             backdrop-filter: blur(10px);
             transition: all 0.3s ease;
             letter-spacing: 0.05em;
-            display: flex;
-            align-items: center;
-            gap: 6px;
         }
         .audio-btn:hover {
             background: rgba(255, 255, 255, 0.2);
             border-color: white;
-            box-shadow: 0 0 20px rgba(255, 255, 255, 0.4);
         }
-        .audio-btn.muted {
-            opacity: 0.6;
-        }
-
-        /* Text sections (scrolling cues) */
-        .section-text {
-            position: absolute;
-            z-index: 5;
-            width: 100%;
-            text-align: center;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 1s ease;
-            top: 15%;
-            left: 0;
-        }
-        .section-text.active {
-            opacity: 1;
-        }
-        .section-text h2 {
-            font-size: clamp(2rem, 8vw, 4rem);
-            font-weight: 300;
-            text-shadow: 0 0 30px rgba(0, 0, 0, 0.8);
-            margin-bottom: 0.5rem;
-        }
-        .section-text p {
-            font-size: 1.1rem;
-            max-width: 600px;
-            margin: 0 auto;
-            text-shadow: 0 0 15px black;
-        }
-
         #ending-message {
             position: fixed;
             bottom: 20%;
@@ -170,58 +123,26 @@
             cursor: pointer;
             font-weight: bold;
             letter-spacing: 0.1em;
-            transition: all 0.4s ease;
             box-shadow: 0 0 40px rgba(255, 215, 0, 0.6);
-            backdrop-filter: blur(5px);
+            transition: 0.4s;
         }
         .start-journey-btn:hover {
             background: #fff;
             box-shadow: 0 0 60px gold;
             transform: scale(1.05);
         }
-
-        @media (max-width: 768px) {
-            .audio-btn {
-                padding: 8px 14px;
-                font-size: 0.8rem;
-            }
-        }
     </style>
 </head>
 <body>
     <div id="canvas-container"></div>
-
-    <!-- Loading Screen -->
     <div id="loading-screen">
         <div>JOURNEY TO FREEDOM</div>
         <div id="loading-bar-container"><div id="loading-bar"></div></div>
     </div>
-
-    <!-- Section texts (hidden, triggered by GSAP) -->
-    <div class="section-text" id="section-dark">
-        <h2>🌑 The Darkness</h2>
-        <p>Fear, addiction, old habits... left behind</p>
-    </div>
-    <div class="section-text" id="section-walk">
-        <h2>🚶 The Walk</h2>
-        <p>Every step is a choice toward light</p>
-    </div>
-    <div class="section-text" id="section-dawn">
-        <h2>🌅 Dawn</h2>
-        <p>Hope breaks through the clouds</p>
-    </div>
-    <div class="section-text" id="section-freedom">
-        <h2>🕊️ Freedom</h2>
-        <p>A new beginning in the light</p>
-    </div>
-
-    <!-- Ending overlay -->
     <div id="ending-message">
         <h1>Every step away from darkness<br>is a step closer to the light.</h1>
         <button class="start-journey-btn" id="restart-btn">Start Your Journey</button>
     </div>
-
-    <!-- Audio controls -->
     <div id="ui-overlay">
         <button id="play-music-btn" class="audio-btn">▶ Play Music</button>
         <button id="pause-music-btn" class="audio-btn">⏸️ Pause</button>
@@ -230,43 +151,41 @@
 
     <script type="module">
         import * as THREE from 'three';
-        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
         import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
         import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+        import { OutlinePass } from 'three/addons/postprocessing/OutlinePass.js';
         import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
         import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
         import { RGBShiftShader } from 'three/addons/shaders/RGBShiftShader.js';
 
-        // ---------- INITIALIZATION ----------
-        const container = document.getElementById('canvas-container');
+        // ---------- LOADING ----------
         const loadingScreen = document.getElementById('loading-screen');
         const loadingBar = document.getElementById('loading-bar');
-
-        // Simulate loading
         let loadProgress = 0;
         const loadingInterval = setInterval(() => {
-            loadProgress += Math.random() * 15;
+            loadProgress += Math.random() * 12;
             if (loadProgress >= 100) {
                 loadProgress = 100;
                 clearInterval(loadingInterval);
                 setTimeout(() => {
                     loadingScreen.style.opacity = '0';
                     setTimeout(() => loadingScreen.style.display = 'none', 800);
-                    startExperience();
+                    startJourney();
                 }, 400);
             }
             loadingBar.style.width = loadProgress + '%';
         }, 150);
 
-        // Scene setup
+        // ---------- SCENE SETUP ----------
+        const container = document.getElementById('canvas-container');
         const scene = new THREE.Scene();
-        scene.fog = new THREE.FogExp2(0x050510, 0.00015);
+        scene.fog = new THREE.FogExp2(0x050510, 0.0002);
 
-        const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(0, 3.5, 12);
-        camera.lookAt(0, 1.5, 0);
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 3.2, 10);
+        camera.lookAt(0, 1.3, 0);
 
-        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         renderer.shadowMap.enabled = true;
@@ -274,186 +193,179 @@
         renderer.toneMapping = THREE.ReinhardToneMapping;
         container.appendChild(renderer.domElement);
 
-        // Post processing
+        // Post-processing
         const renderScene = new RenderPass(scene, camera);
         const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.5, 0.4, 0.85);
         bloomPass.threshold = 0.1;
-        bloomPass.strength = 0.8;
-        bloomPass.radius = 0.5;
-
+        bloomPass.strength = 0.6;
         const rgbShiftPass = new ShaderPass(RGBShiftShader);
-        rgbShiftPass.uniforms['amount'].value = 0.0015;
+        rgbShiftPass.uniforms['amount'].value = 0.0012;
+        const outlinePass = new OutlinePass(new THREE.Vector2(window.innerWidth, window.innerHeight), scene, camera);
+        outlinePass.edgeStrength = 4;
+        outlinePass.edgeGlow = 0.1;
+        outlinePass.edgeThickness = 1.5;
+        outlinePass.pulsePeriod = 0;
+        outlinePass.usePatternTexture = false;
+        outlinePass.visibleEdgeColor.set('#000000');
+        outlinePass.hiddenEdgeColor.set('#000000');
 
         const composer = new EffectComposer(renderer);
         composer.addPass(renderScene);
+        composer.addPass(outlinePass);
         composer.addPass(bloomPass);
         composer.addPass(rgbShiftPass);
         rgbShiftPass.renderToScreen = true;
 
-        // Lighting (dynamic)
-        const ambientLight = new THREE.AmbientLight(0x404066);
-        scene.add(ambientLight);
-        const dirLight = new THREE.DirectionalLight(0xffeedd, 0.3);
-        dirLight.position.set(10, 20, 5);
+        // Lighting
+        const ambient = new THREE.AmbientLight(0x404066);
+        scene.add(ambient);
+        const dirLight = new THREE.DirectionalLight(0xccddff, 0.3);
+        dirLight.position.set(5, 10, 5);
         dirLight.castShadow = true;
         dirLight.receiveShadow = true;
-        dirLight.shadow.mapSize.width = 512;
-        dirLight.shadow.mapSize.height = 512;
-        dirLight.shadow.camera.near = 1;
-        dirLight.shadow.camera.far = 50;
         scene.add(dirLight);
 
         // Ground
-        const groundGeometry = new THREE.PlaneGeometry(80, 80);
-        const groundMaterial = new THREE.MeshStandardMaterial({ color: 0x1a1a2e, roughness: 0.9, metalness: 0.1 });
-        const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+        const groundGeo = new THREE.PlaneGeometry(60, 60);
+        const groundMat = new THREE.MeshStandardMaterial({ color: 0x1a1a2e, roughness: 0.9 });
+        const ground = new THREE.Mesh(groundGeo, groundMat);
         ground.rotation.x = -Math.PI / 2;
         ground.position.y = -0.5;
         ground.receiveShadow = true;
         scene.add(ground);
 
-        // Stones
+        // Environment: stones, rain, clouds (sama seperti sebelumnya, disederhanakan)
         const stoneGroup = new THREE.Group();
-        for (let i = 0; i < 25; i++) {
-            const stoneGeo = new THREE.DodecahedronGeometry(0.2 + Math.random() * 0.5);
-            const stoneMat = new THREE.MeshStandardMaterial({ color: 0x333344, roughness: 0.8 });
-            const stone = new THREE.Mesh(stoneGeo, stoneMat);
-            stone.position.set((Math.random() - 0.5) * 20, -0.2, (Math.random() - 0.5) * 25);
-            stone.castShadow = true;
-            stone.receiveShadow = true;
+        for (let i = 0; i < 20; i++) {
+            const stone = new THREE.Mesh(new THREE.DodecahedronGeometry(0.2 + Math.random() * 0.4),
+                new THREE.MeshStandardMaterial({ color: 0x334455, roughness: 0.8 }));
+            stone.position.set((Math.random() - 0.5) * 18, -0.2, (Math.random() - 0.5) * 20);
+            stone.castShadow = stone.receiveShadow = true;
             stoneGroup.add(stone);
         }
         scene.add(stoneGroup);
 
-        // Rain particles
-        const rainCount = 600;
         const rainGeo = new THREE.BufferGeometry();
+        const rainCount = 500;
         const rainPositions = new Float32Array(rainCount * 3);
         for (let i = 0; i < rainCount * 3; i += 3) {
-            rainPositions[i] = (Math.random() - 0.5) * 30;
-            rainPositions[i + 1] = Math.random() * 15;
-            rainPositions[i + 2] = (Math.random() - 0.5) * 25;
+            rainPositions[i] = (Math.random() - 0.5) * 25;
+            rainPositions[i + 1] = Math.random() * 12;
+            rainPositions[i + 2] = (Math.random() - 0.5) * 20;
         }
         rainGeo.setAttribute('position', new THREE.BufferAttribute(rainPositions, 3));
-        const rainMat = new THREE.PointsMaterial({ color: 0xaaccff, size: 0.08, transparent: true, opacity: 0.5,
+        const rainMat = new THREE.PointsMaterial({ color: 0xaaccff, size: 0.07, transparent: true, opacity: 0.4,
             blending: THREE.AdditiveBlending });
         const rain = new THREE.Points(rainGeo, rainMat);
         scene.add(rain);
 
-        // Clouds / fog spheres
-        const cloudGroup = new THREE.Group();
-        for (let i = 0; i < 12; i++) {
-            const cloudGeo = new THREE.SphereGeometry(0.8 + Math.random() * 1.2, 7, 7);
-            const cloudMat = new THREE.MeshStandardMaterial({ color: 0x334455, transparent: true, opacity: 0.25,
-                roughness: 0.9 });
-            const cloud = new THREE.Mesh(cloudGeo, cloudMat);
-            cloud.position.set((Math.random() - 0.5) * 18, 2 + Math.random() * 4, (Math.random() - 0.5) * 20);
-            cloudGroup.add(cloud);
-        }
-        scene.add(cloudGroup);
-
-        // Sun (hidden at start)
-        const sunGeometry = new THREE.SphereGeometry(1.2, 32, 32);
-        const sunMaterial = new THREE.MeshBasicMaterial({ color: 0xffaa33 });
-        const sun = new THREE.Mesh(sunGeometry, sunMaterial);
-        sun.position.set(5, 8, -15);
+        // Sun & rays
+        const sun = new THREE.Mesh(new THREE.SphereGeometry(1.0, 32, 32), new THREE.MeshBasicMaterial({ color: 0xffaa33 }));
+        sun.position.set(4, 7, -14);
         sun.visible = false;
         scene.add(sun);
-
-        // Light rays (cone)
         const rayGroup = new THREE.Group();
-        const rayGeometry = new THREE.CylinderGeometry(0.1, 3, 12, 16);
-        const rayMaterial = new THREE.MeshBasicMaterial({ color: 0xffdd99, transparent: true, opacity: 0.08, blending: THREE
-                .AdditiveBlending });
-        const rayCone = new THREE.Mesh(rayGeometry, rayMaterial);
+        const rayCone = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 2.5, 12, 16),
+            new THREE.MeshBasicMaterial({ color: 0xffdd99, transparent: true, opacity: 0.06, blending: THREE
+                    .AdditiveBlending }));
         rayCone.position.y = 6;
         rayGroup.add(rayCone);
         rayGroup.position.copy(sun.position);
         rayGroup.visible = false;
         scene.add(rayGroup);
 
-        // Birds
+        // Birds & flowers (hidden at start)
         const birdGroup = new THREE.Group();
-        for (let i = 0; i < 5; i++) {
-            const birdGeo = new THREE.ConeGeometry(0.15, 0.4, 4);
-            const birdMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
-            const bird = new THREE.Mesh(birdGeo, birdMat);
-            bird.position.set((Math.random() - 0.5) * 6, 5 + Math.random() * 3, -8 + Math.random() * 4);
+        for (let i = 0; i < 6; i++) {
+            const bird = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.35, 4),
+                new THREE.MeshStandardMaterial({ color: 0xffffff }));
+            bird.position.set((Math.random() - 0.5) * 5, 4 + Math.random() * 3, -7 + Math.random() * 3);
             birdGroup.add(bird);
         }
         birdGroup.visible = false;
         scene.add(birdGroup);
-
-        // Flowers
         const flowerGroup = new THREE.Group();
-        for (let i = 0; i < 30; i++) {
-            const stemGeo = new THREE.CylinderGeometry(0.03, 0.04, 0.5);
-            const stemMat = new THREE.MeshStandardMaterial({ color: 0x2d5a27 });
-            const stem = new THREE.Mesh(stemGeo, stemMat);
-            stem.position.set((Math.random() - 0.5) * 12, 0.25, (Math.random() - 0.5) * 12);
-            const petalGeo = new THREE.SphereGeometry(0.12, 5, 5);
-            const petalMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(`hsl(${Math.random() * 60 + 30}, 80%, 70%)`) });
-            const petal = new THREE.Mesh(petalGeo, petalMat);
-            petal.position.y = 0.35;
+        for (let i = 0; i < 25; i++) {
+            const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.04, 0.4),
+                new THREE.MeshStandardMaterial({ color: 0x2d5a27 }));
+            stem.position.set((Math.random() - 0.5) * 10, 0.2, (Math.random() - 0.5) * 10);
+            const petal = new THREE.Mesh(new THREE.SphereGeometry(0.1, 5, 5),
+                new THREE.MeshStandardMaterial({ color: new THREE.Color(`hsl(${Math.random() * 50 + 30}, 80%, 70%)`) }));
+            petal.position.y = 0.3;
             stem.add(petal);
             flowerGroup.add(stem);
         }
         flowerGroup.visible = false;
         scene.add(flowerGroup);
 
-        // ----- CHARACTER CREATION -----
+        // ---------- ANIME CHARACTER (toon shading) ----------
         const character = new THREE.Group();
-        // Body
-        const bodyGeo = new THREE.CylinderGeometry(0.35, 0.4, 1.6, 8);
-        const bodyMat = new THREE.MeshStandardMaterial({ color: 0x111122, roughness: 0.5 });
-        const body = new THREE.Mesh(bodyGeo, bodyMat);
-        body.position.y = 0.8;
-        body.castShadow = true;
-        body.receiveShadow = true;
+        // Materials (toon)
+        const skinMat = new THREE.MeshToonMaterial({ color: 0xffddbb });
+        const darkClothMat = new THREE.MeshToonMaterial({ color: 0x0a0a14 });
+        const hairMat = new THREE.MeshToonMaterial({ color: 0x1a1a2e });
+        const eyeMat = new THREE.MeshToonMaterial({ color: 0x000000 });
+        const goldMat = new THREE.MeshToonMaterial({ color: 0xffd700 });
+
+        // Body (ramping)
+        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.32, 1.2, 8), darkClothMat);
+        body.position.y = 0.6;
+        body.castShadow = body.receiveShadow = true;
         character.add(body);
 
-        // Head
-        const headGeo = new THREE.SphereGeometry(0.3, 16, 16);
-        const headMat = new THREE.MeshStandardMaterial({ color: 0x221133, roughness: 0.4 });
-        const head = new THREE.Mesh(headGeo, headMat);
-        head.position.y = 1.7;
-        head.castShadow = true;
-        head.receiveShadow = true;
+        // Head (agak besar)
+        const head = new THREE.Mesh(new THREE.SphereGeometry(0.35, 16, 16), skinMat);
+        head.position.y = 1.4;
+        head.castShadow = head.receiveShadow = true;
         character.add(head);
 
-        // Cloak (plane with animation)
-        const cloakGeo = new THREE.PlaneGeometry(0.9, 1.8, 6, 8);
-        const cloakMat = new THREE.MeshStandardMaterial({ color: 0x0a0a1a, side: THREE.DoubleSide, transparent: true,
-            opacity: 0.9 });
-        const cloak = new THREE.Mesh(cloakGeo, cloakMat);
-        cloak.position.set(0, 0.9, -0.25);
-        cloak.castShadow = true;
-        cloak.receiveShadow = true;
+        // Rambut (beberapa cone)
+        const hairGroup = new THREE.Group();
+        for (let i = 0; i < 8; i++) {
+            const strand = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.4, 4), hairMat);
+            strand.position.set(Math.sin(i * 0.8) * 0.25, 1.6, Math.cos(i * 0.8) * 0.2);
+            strand.rotation.x = 0.3;
+            hairGroup.add(strand);
+        }
+        character.add(hairGroup);
+
+        // Mata (dua bola pipih)
+        const leftEye = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 8), eyeMat);
+        leftEye.position.set(-0.15, 1.5, 0.3);
+        character.add(leftEye);
+        const rightEye = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 8), eyeMat);
+        rightEye.position.set(0.15, 1.5, 0.3);
+        character.add(rightEye);
+
+        // Jubah (plane besar di belakang)
+        const cloakGeo = new THREE.PlaneGeometry(0.9, 1.9, 6, 10);
+        const cloak = new THREE.Mesh(cloakGeo, darkClothMat);
+        cloak.position.set(0, 0.8, -0.3);
+        cloak.castShadow = cloak.receiveShadow = true;
         character.add(cloak);
 
-        // Arms
-        const armGeo = new THREE.CylinderGeometry(0.12, 0.12, 0.8);
-        const armMat = new THREE.MeshStandardMaterial({ color: 0x111122 });
-        const leftArm = new THREE.Mesh(armGeo, armMat);
-        leftArm.position.set(-0.45, 1.2, 0);
-        leftArm.rotation.z = 0.2;
+        // Tangan
+        const armGeo = new THREE.CylinderGeometry(0.1, 0.1, 0.7);
+        const leftArm = new THREE.Mesh(armGeo, skinMat);
+        leftArm.position.set(-0.4, 1.0, 0);
+        leftArm.rotation.z = 0.3;
         leftArm.castShadow = true;
         character.add(leftArm);
-        const rightArm = new THREE.Mesh(armGeo, armMat);
-        rightArm.position.set(0.45, 1.2, 0);
-        rightArm.rotation.z = -0.2;
+        const rightArm = new THREE.Mesh(armGeo, skinMat);
+        rightArm.position.set(0.4, 1.0, 0);
+        rightArm.rotation.z = -0.3;
         rightArm.castShadow = true;
         character.add(rightArm);
 
-        character.position.set(0, 0.1, 4);
+        character.position.set(0, 0.1, 5);
         scene.add(character);
+        // Daftarkan karakter ke outline
+        outlinePass.selectedObjects = [character];
 
-        // ----- AUDIO ENGINE (Web Audio API) -----
-        let audioCtx;
-        let masterGain;
-        let musicGain, windGain, stepsGain, birdsGain;
-        let isMuted = false;
+        // ---------- AUDIO (sama seperti sebelumnya) ----------
+        let audioCtx, masterGain, musicGain, windGain, stepsGain, birdsGain;
         let musicPlaying = false;
+        let isMuted = false;
 
         function initAudio() {
             if (audioCtx) return;
@@ -461,84 +373,76 @@
             masterGain = audioCtx.createGain();
             masterGain.gain.value = 0.5;
             masterGain.connect(audioCtx.destination);
-
-            // Music generator (simple piano arpeggio)
             musicGain = audioCtx.createGain();
-            musicGain.gain.value = 0.25;
+            musicGain.gain.value = 0.2;
             musicGain.connect(masterGain);
-
             windGain = audioCtx.createGain();
-            windGain.gain.value = 0.15;
+            windGain.gain.value = 0.12;
             windGain.connect(masterGain);
-
             stepsGain = audioCtx.createGain();
-            stepsGain.gain.value = 0.2;
+            stepsGain.gain.value = 0.15;
             stepsGain.connect(masterGain);
-
             birdsGain = audioCtx.createGain();
             birdsGain.gain.value = 0.0;
             birdsGain.connect(masterGain);
-
-            startWind();
-            startMusic();
-            startSteps();
+            generateWind();
+            playMusicLoop();
+            startFootsteps();
         }
 
-        function startWind() {
+        function generateWind() {
             const bufferSize = 2 * audioCtx.sampleRate;
-            const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-            const output = noiseBuffer.getChannelData(0);
-            for (let i = 0; i < bufferSize; i++) {
-                output[i] = Math.random() * 2 - 1;
-            }
-            const whiteNoise = audioCtx.createBufferSource();
-            whiteNoise.buffer = noiseBuffer;
-            whiteNoise.loop = true;
+            const noise = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const data = noise.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+            const source = audioCtx.createBufferSource();
+            source.buffer = noise;
+            source.loop = true;
             const filter = audioCtx.createBiquadFilter();
             filter.type = 'lowpass';
-            filter.frequency.value = 400;
-            whiteNoise.connect(filter);
+            filter.frequency.value = 350;
+            source.connect(filter);
             filter.connect(windGain);
-            whiteNoise.start();
+            source.start();
         }
 
-        function startMusic() {
-            const notes = [261.63, 329.63, 392.00, 523.25]; // C E G C
-            let index = 0;
-            const playNote = () => {
+        function playMusicLoop() {
+            const notes = [261.63, 329.63, 392.00, 523.25];
+            let i = 0;
+            const loop = () => {
                 if (!musicPlaying || isMuted) return;
                 const osc = audioCtx.createOscillator();
                 const gain = audioCtx.createGain();
                 osc.type = 'sine';
-                osc.frequency.value = notes[index % notes.length];
-                gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.8);
+                osc.frequency.value = notes[i % notes.length];
+                gain.gain.setValueAtTime(0.06, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.7);
                 osc.connect(gain);
                 gain.connect(musicGain);
                 osc.start();
-                osc.stop(audioCtx.currentTime + 0.8);
-                index++;
-                setTimeout(playNote, 900);
+                osc.stop(audioCtx.currentTime + 0.7);
+                i++;
+                setTimeout(loop, 850);
             };
-            playNote();
+            loop();
         }
 
-        function startSteps() {
+        function startFootsteps() {
             let step = false;
             setInterval(() => {
                 if (!musicPlaying || isMuted) return;
                 const osc = audioCtx.createOscillator();
                 const gain = audioCtx.createGain();
                 osc.type = 'triangle';
-                osc.frequency.value = step ? 80 : 70;
-                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
+                osc.frequency.value = step ? 75 : 65;
+                gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.12);
                 osc.connect(gain);
                 gain.connect(stepsGain);
                 osc.start();
-                osc.stop(audioCtx.currentTime + 0.15);
+                osc.stop(audioCtx.currentTime + 0.12);
                 step = !step;
-            }, 600);
+            }, 550);
         }
 
         document.getElementById('play-music-btn').addEventListener('click', () => {
@@ -551,9 +455,7 @@
                 document.getElementById('mute-btn').textContent = '🔊 Mute';
             }
         });
-        document.getElementById('pause-music-btn').addEventListener('click', () => {
-            musicPlaying = false;
-        });
+        document.getElementById('pause-music-btn').addEventListener('click', () => { musicPlaying = false; });
         document.getElementById('mute-btn').addEventListener('click', () => {
             if (!audioCtx) return;
             isMuted = !isMuted;
@@ -561,118 +463,84 @@
             document.getElementById('mute-btn').textContent = isMuted ? '🔇 Unmute' : '🔊 Mute';
         });
 
-        // ----- ANIMATION LOOP -----
-        let clock = new THREE.Clock();
-
-        function animate() {
-            const delta = clock.getDelta();
+        // ---------- ANIMATION LOOP ----------
+        function animateLoop() {
             const time = performance.now() * 0.001;
-
             // Rain fall
             const positions = rain.geometry.attributes.position.array;
             for (let i = 0; i < positions.length; i += 3) {
-                positions[i + 1] -= 0.08;
+                positions[i + 1] -= 0.07;
                 if (positions[i + 1] < -0.5) {
                     positions[i + 1] = 8;
-                    positions[i] = (Math.random() - 0.5) * 25;
-                    positions[i + 2] = (Math.random() - 0.5) * 20;
+                    positions[i] = (Math.random() - 0.5) * 22;
+                    positions[i + 2] = (Math.random() - 0.5) * 18;
                 }
             }
             rain.geometry.attributes.position.needsUpdate = true;
-
             // Cloak waving
-            const cloakVertices = cloak.geometry.attributes.position.array;
-            for (let i = 0; i < cloakVertices.length; i += 3) {
-                const y = cloakVertices[i + 1];
-                cloakVertices[i + 2] = Math.sin(time * 5 + y * 2) * 0.08;
+            const pos = cloak.geometry.attributes.position.array;
+            for (let i = 0; i < pos.length; i += 3) {
+                const y = pos[i + 1];
+                pos[i + 2] = Math.sin(time * 6 + y * 2.5) * 0.1;
             }
             cloak.geometry.attributes.position.needsUpdate = true;
-
-            // Cloud movement
-            cloudGroup.children.forEach((cloud, idx) => {
-                cloud.position.x += Math.sin(time + idx) * 0.002;
-                cloud.position.z += Math.cos(time + idx) * 0.002;
-            });
-
             // Bird flight
             if (birdGroup.visible) {
-                birdGroup.children.forEach((bird, i) => {
-                    bird.position.y += Math.sin(time * 3 + i) * 0.005;
-                    bird.position.x += Math.cos(time * 2 + i) * 0.008;
+                birdGroup.children.forEach((b, idx) => {
+                    b.position.y += Math.sin(time * 4 + idx) * 0.004;
+                    b.position.x += Math.cos(time * 3 + idx) * 0.006;
                 });
             }
-
             composer.render();
-            requestAnimationFrame(animate);
+            requestAnimationFrame(animateLoop);
         }
+        animateLoop();
 
-        animate();
-
-        // ----- JOURNEY SEQUENCE with GSAP -----
-        function startExperience() {
-            // Initially dark, character walks forward
-            const tl = gsap.timeline({ delay: 0.5 });
-
-            // Phase 1: Darkness walk
-            tl.to(character.position, { z: 0, duration: 8, ease: "none" }, 0);
-            tl.to(camera.position, { z: 8, y: 3, duration: 8, ease: "power1.inOut" }, 0);
-            tl.to(ambientLight, { intensity: 0.2, duration: 6 }, 0);
-            tl.to(dirLight, { intensity: 0.1, duration: 6 }, 0);
-
-            // Transition to light
-            tl.to(character.position, { z: -3, duration: 10, ease: "power2.inOut" }, 8);
-            tl.to(camera.position, { z: 5, y: 4.5, duration: 10, ease: "power2.inOut" }, 8);
-            tl.to(ambientLight, { intensity: 0.8, duration: 8 }, 8);
-            tl.to(dirLight, { intensity: 1.2, duration: 8 }, 8);
-            tl.to(groundMaterial.color, { r: 0.2, g: 0.5, b: 0.2, duration: 8 }, 8);
-            tl.to(scene.fog, { density: 0.00002, duration: 8 }, 8);
-            tl.to(rain.material, { opacity: 0, duration: 6 }, 8);
-            tl.to(cloudGroup.children, { opacity: 0, duration: 6 }, 8);
-
-            // Sun appears
+        // ---------- JOURNEY SEQUENCE (GSAP) ----------
+        function startJourney() {
+            const tl = gsap.timeline({ delay: 0.3 });
+            // Phase darkness
+            tl.to(character.position, { z: 1.5, duration: 7, ease: "none" }, 0);
+            tl.to(camera.position, { z: 7, y: 3, duration: 7, ease: "power1.inOut" }, 0);
+            tl.to(ambient, { intensity: 0.15, duration: 5 }, 0);
+            tl.to(dirLight, { intensity: 0.1, duration: 5 }, 0);
+            // Transition
+            tl.to(character.position, { z: -2, duration: 9, ease: "power2.inOut" }, 7);
+            tl.to(camera.position, { z: 4.5, y: 4, duration: 9, ease: "power2.inOut" }, 7);
+            tl.to(ambient, { intensity: 0.9, duration: 7 }, 7);
+            tl.to(dirLight, { intensity: 1.4, duration: 7 }, 7);
+            tl.to(groundMat.color, { r: 0.25, g: 0.55, b: 0.2, duration: 7 }, 7);
+            tl.to(scene.fog, { density: 0.00002, duration: 7 }, 7);
+            tl.to(rain.material, { opacity: 0, duration: 5 }, 7);
+            // Sun & rays
             tl.call(() => { sun.visible = true;
-                rayGroup.visible = true; }, null, 13);
-            tl.to(sun.position, { y: 6, z: -12, duration: 5 }, 13);
-            tl.to(rayGroup.position, { y: 6, z: -12, duration: 5 }, 13);
-
-            // Birds and flowers appear
+                rayGroup.visible = true; }, null, 12);
+            tl.to(sun.position, { y: 5, z: -11, duration: 4 }, 12);
+            tl.to(rayGroup.position, { y: 5, z: -11, duration: 4 }, 12);
+            // Birds, flowers
             tl.call(() => { birdGroup.visible = true;
-                flowerGroup.visible = true; }, null, 16);
-            tl.to(birdGroup.position, { y: 2, duration: 3 }, 16);
-
-            // Character transformation (cloak color)
-            tl.to(cloak.material.color, { r: 0.9, g: 0.9, b: 0.8, duration: 4 }, 16);
-            tl.to(body.material.color, { r: 0.9, g: 0.9, b: 0.8, duration: 4 }, 16);
-            tl.to(head.material.color, { r: 0.95, g: 0.85, b: 0.7, duration: 4 }, 16);
-
+                flowerGroup.visible = true; }, null, 15);
+            // Character transform
+            tl.to([darkClothMat.color, cloak.material.color], { r: 0.95, g: 0.9, b: 0.75, duration: 3 }, 15);
+            tl.to(hairMat.color, { r: 0.3, g: 0.2, b: 0.1, duration: 3 }, 15);
             // Ending
             tl.call(() => {
                 document.getElementById('ending-message').classList.add('show');
-                if (audioCtx && musicPlaying) {
-                    birdsGain.gain.linearRampToValueAtTime(0.15, audioCtx.currentTime + 2);
-                }
-            }, null, 19);
+                if (audioCtx && musicPlaying) birdsGain.gain.linearRampToValueAtTime(0.12, audioCtx.currentTime +
+                    2);
+            }, null, 17);
             tl.to({}, { duration: 2 });
-
-            // Restart button
-            document.getElementById('restart-btn').addEventListener('click', () => {
-                location.reload();
-            });
         }
 
-        window.addEventListener('resize', onWindowResize, false);
-
-        function onWindowResize() {
+        document.getElementById('restart-btn').addEventListener('click', () => location.reload());
+        window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
             composer.setSize(window.innerWidth, window.innerHeight);
-        }
-
-        // Initial audio context unlock on user gesture
-        window.addEventListener('click', () => {
-            if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
-        }, { once: true });
+        });
+        window.addEventListener('click', () => { if (audioCtx?.state === 'suspended') audioCtx.resume(); }, { once:
+                true });
     </script>
 </body>
 </html>
