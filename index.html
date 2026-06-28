@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Anime Couple with Roses - Animasi</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: #1a0a0a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Segoe UI', sans-serif;
+            overflow: hidden;
+        }
+        canvas {
+            border-radius: 20px;
+            box-shadow: 0 0 60px rgba(255, 50, 50, 0.3), 0 0 120px rgba(200, 50, 50, 0.15);
+            width: 100%;
+            max-width: 900px;
+            height: auto;
+            aspect-ratio: 16 / 10;
+            background: #1a0a1a;
+            cursor: pointer;
+            transition: box-shadow 0.5s;
+        }
+        canvas:hover {
+            box-shadow: 0 0 80px rgba(255, 80, 80, 0.4), 0 0 160px rgba(200, 50, 50, 0.2);
+        }
+        .info {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(255, 200, 200, 0.5);
+            font-size: 13px;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px rgba(255, 0, 0, 0.2);
+            pointer-events: none;
+            font-weight: 300;
+        }
+        .info span {
+            color: #ff6b6b;
+        }
+        @media (max-width: 600px) {
+            canvas {
+                border-radius: 10px;
+            }
+            .info {
+                font-size: 10px;
+                bottom: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="canvas"></canvas>
+    <div class="info">✦ <span>❤</span> klik untuk efek tambahan <span>❤</span> ✦</div>
+
+    <script>
+        // ============================================================
+        // SETUP
+        // ============================================================
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        let W, H;
+        let scale = 1;
+        const BASE_W = 900;
+        const BASE_H = 562;
+
+        function resize() {
+            const container = canvas.parentElement;
+            const maxW = window.innerWidth - 20;
+            const maxH = window.innerHeight - 80;
+            const ratio = BASE_W / BASE_H;
+            let w = Math.min(maxW, 900);
+            let h = w / ratio;
+            if (h > maxH) { h = maxH;
+                w = h * ratio; }
+            canvas.width = BASE_W;
+            canvas.height = BASE_H;
+            canvas.style.width = w + 'px';
+            canvas.style.height = h + 'px';
+            scale = BASE_W / w;
+            W = BASE_W;
+            H = BASE_H;
+        }
+        resize();
+        window.addEventListener('resize', resize);
+
+        // ============================================================
+        // UTILITY
+        // ============================================================
+        function lerp(a, b, t) { return a + (b - a) * t; }
+
+        function rand(min, max) { return Math.random() * (max - min) + min; }
+
+        function randInt(min, max) { return Math.floor(rand(min, max + 1)); }
+
+        function dist(x1, y1, x2, y2) { return Math.hypot(x2 - x1, y2 - y1); }
+
+        function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+
+        // ============================================================
+        // PARTICLE SYSTEMS
+        // ============================================================
+
+        // --- Petals (cherry blossom) ---
+        class Petal {
+            constructor() { this.reset(true); }
+            reset(init) {
+                this.x = rand(-50, W + 50);
+                this.y = init ? rand(-50, H + 50) : rand(-80, -20);
+                this.size = rand(6, 14);
+                this.speedX = rand(-0.3, 0.3);
+                this.speedY = rand(0.4, 1.2);
+                this.rotation = rand(0, Math.PI * 2);
+                this.rotSpeed = rand(-0.02, 0.02);
+                this.wobble = rand(0, Math.PI * 2);
+                this.wobbleSpeed = rand(0.02, 0.05);
+                this.wobbleAmp = rand(0.3, 1.2);
+                this.opacity = rand(0.6, 1);
+                this.color = `hsla(${randInt(330, 360)}, 80%, ${randInt(70, 90)}%, `;
+                this.petalType = randInt(0, 2);
+            }
+            update() {
+                this.x += this.speedX + Math.sin(this.wobble) * this.wobbleAmp * 0.2;
+                this.y += this.speedY;
+                this.rotation += this.rotSpeed;
+                this.wobble += this.wobbleSpeed;
+                if (this.y > H + 30 || this.x < -60 || this.x > W + 60) {
+                    this.reset(false);
+                }
+            }
+            draw(ctx) {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.rotation);
+                ctx.globalAlpha = this.opacity;
+                const s = this.size;
+                ctx.beginPath();
+                if (this.petalType === 0) {
+                    // rounded petal
+                    ctx.ellipse(0, 0, s * 0.6, s * 0.9, 0, 0, Math.PI * 2);
+                } else if (this.petalType === 1) {
+                    // teardrop
+                    ctx.moveTo(0, -s * 0.9);
+                    ctx.quadraticCurveTo(s * 0.7, -s * 0.3, 0, s * 0.9);
+                    ctx.quadraticCurveTo(-s * 0.7, -s * 0.3, 0, -s * 0.9);
+                } else {
+                    // heart-ish petal
+                    ctx.moveTo(0, -s * 0.7);
+                    ctx.bezierCurveTo(s * 0.8, -s * 0.9, s * 0.8, s * 0.3, 0, s * 0.8);
+                    ctx.bezierCurveTo(-s * 0.8, s * 0.3, -s * 0.8, -s * 0.9, 0, -s * 0.7);
+                }
+                ctx.closePath();
+                const grad = ctx.createRadialGradient(-s * 0.2, -s * 0.3, 0, 0, 0, s);
+                grad.addColorStop(0, this.color + '1)');
+                grad.addColorStop(0.6, this.color + '0.8)');
+                grad.addColorStop(1, this.color + '0.3)');
+                ctx.fillStyle = grad;
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        // --- Hearts ---
+        class HeartParticle {
+            constructor() { this.reset(true); }
+            reset(init) {
+                this.x = rand(0, W);
+                this.y = init ? rand(0, H) : rand(H + 10, H + 60);
+                this.size = rand(6, 18);
+                this.speedX = rand(-0.4, 0.4);
+                this.speedY = rand(-1.2, -0.4);
+                this.opacity = rand(0.4, 0.9);
+                this.life = rand(80, 200);
+                this.maxLife = this.life;
+                this.wobble = rand(0, Math.PI * 2);
+                this.wobbleSpeed = rand(0.02, 0.06);
+                this.wobbleAmp = rand(0.5, 1.5);
+                this.hue = randInt(330, 360);
+            }
+            update() {
+                this.x += this.speedX + Math.sin(this.wobble) * 0.3;
+                this.y += this.speedY;
+                this.wobble += this.wobbleSpeed;
+                this.life--;
+                if (this.life < 0 || this.y < -60) {
+                    this.reset(false);
+                }
+            }
+            draw(ctx) {
+                const alpha = this.opacity * (this.life / this.maxLife);
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.globalAlpha = alpha;
+                const s = this.size;
+                ctx.scale(0.6, 0.6);
+                ctx.beginPath();
+                ctx.moveTo(0, s * 0.3);
+                ctx.bezierCurveTo(-s * 0.5, -s * 0.4, -s * 0.9, s * 0.1, 0, s * 0.8);
+                ctx.bezierCurveTo(s * 0.9, s * 0.1, s * 0.5, -s * 0.4, 0, s * 0.3);
+                ctx.closePath();
+                const grad = ctx.createRadialGradient(-s * 0.2, -s * 0.1, 0, 0, 0, s);
+                grad.addColorStop(0, `hsla(${this.hue}, 100%, 80%, 1)`);
+                grad.addColorStop(0.5, `hsla(${this.hue}, 90%, 60%, 0.9)`);
+                grad.addColorStop(1, `hsla(${this.hue}, 80%, 40%, 0.6)`);
+                ctx.fillStyle = grad;
+                ctx.fill();
+                ctx.shadowColor = `hsla(${this.hue}, 100%, 60%, 0.5)`;
+                ctx.shadowBlur = 15;
+                ctx.fill();
+                ctx.shadowBlur = 0;
+                ctx.restore();
+            }
+        }
+
+        // --- Sparkles ---
+        class Sparkle {
+            constructor() { this.reset(true); }
+            reset(init) {
+                this.x = rand(0, W);
+                this.y = init ? rand(0, H) : rand(-20, -10);
+                this.size = rand(2, 5);
+                this.speedX = rand(-0.2, 0.2);
+                this.speedY = rand(0.3, 0.9);
+                this.life = rand(40, 120);
+                this.maxLife = this.life;
+                this.twinkle = rand(0, Math.PI * 2);
+                this.twinkleSpeed = rand(0.05, 0.15);
+                this.hue = randInt(40, 60);
+            }
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+                this.twinkle += this.twinkleSpeed;
+                this.life--;
+                if (this.life < 0 || this.y > H + 20) {
+                    this.reset(false);
+                }
+            }
+            draw(ctx) {
+                const alpha = (this.life / this.maxLife) * (0.5 + 0.5 * Math.sin(this.twinkle));
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.globalAlpha = alpha;
+                const s = this.size;
+                // star shape
+                ctx.beginPath();
+                for (let i = 0; i < 8; i++) {
+                    const angle = (i / 8) * Math.PI * 2 - Math.PI / 2;
+                    const r = i % 2 === 0 ? s : s * 0.4;
+                    if (i === 0) ctx.moveTo(Math.cos(angle) * r, Math.sin(angle) * r);
+                    else ctx.lineTo(Math.cos(angle) * r, Math.sin(angle) * r);
+                }
+                ctx.closePath();
+                ctx.fillStyle = `hsla(${this.hue}, 100%, 85%, 1)`;
+                ctx.fill();
+                ctx.shadowColor = `hsla(${this.hue}, 100%, 80%, 0.6)`;
+                ctx.shadowBlur = 12;
+                ctx.fill();
+                ctx.shadowBlur = 0;
+                ctx.restore();
+            }
+        }
+
+        // ============================================================
+        // CHARACTERS
+        // ============================================================
+
+        // --- Draw anime-style character ---
+        function drawCharacter(ctx, x, y, facing, isGirl, time, roseGlow) {
+            const s = 1.0;
+            const dir = facing; // 1 = right, -1 = left
+
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.scale(s * dir, s);
+
+            // ---- Shadow ----
+            ctx.save();
+            ctx.shadowColor = 'rgba(0,0,0,0.2)';
+            ctx.shadowBlur = 30;
+            ctx.beginPath();
+            ctx.ellipse(0, 70, 60, 12, 0, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(0,0,0,0.15)';
+            ctx.fill();
+            ctx.restore();
+
+            const bodyY = 10;
+            const headY = -50;
+
+            // ---- Body ----
+            // Dress / outfit
+            ctx.save();
+            const gradBody = ctx.createLinearGradient(-30, bodyY, 30, bodyY + 80);
+            if (isGirl) {
+                gradBody.addColorStop(0, '#f5a0b0');
+                gradBody.addColorStop(0.4, '#e87a8a');
+                gradBody.addColorStop(1, '#c95a6a');
+            } else {
+                gradBody.addColorStop(0, '#6a7a9a');
+                gradBody.addColorStop(0.4, '#4a5a7a');
+                gradBody.addColorStop(1, '#2a3a5a');
+            }
+            ctx.fillStyle = gradBody;
+            ctx.beginPath();
+            ctx.moveTo(-28, bodyY + 10);
+            ctx.quadraticCurveTo(-35, bodyY + 30, -30, bodyY + 70);
+            ctx.quadraticCurveTo(-20, bodyY + 85, 0, bodyY + 90);
+            ctx.quadraticCurveTo(20, bodyY + 85, 30, bodyY + 70);
+            ctx.quadraticCurveTo(35, bodyY + 30, 28, bodyY + 10);
+            ctx.closePath();
+            ctx.fill();
+
+            // Collar / detail
+            ctx.fillStyle = isGirl ? '#f0c0c8' : '#7a8aaa';
+            ctx.beginPath();
+            ctx.moveTo(-10, bodyY + 12);
+            ctx.quadraticCurveTo(0, bodyY + 22, 10, bodyY + 12);
+            ctx.quadraticCurveTo(0, bodyY + 18, -10, bodyY + 12);
+            ctx.fill();
+            ctx.restore();
+
+            // ---- Arms ----
+            const armSway = Math.sin(time * 0.8 + (isGirl ? 0 : 1.2)) * 0.06;
+            // Left arm (holding rose)
+            ctx.save();
+            ctx.translate(-24, bodyY + 18);
+            ctx.rotate(-0.6 + armSway * 0.5);
+            ctx.fillStyle = isGirl ? '#f5d0d8' : '#d4c8b8';
+            ctx.beginPath();
+            ctx.roundRect(-4, 0, 8, 34, 4);
+            ctx.fill();
+            // hand
+            ctx.beginPath();
+            ctx.arc(0, 34, 6, 0, Math.PI * 2);
+            ctx.fillStyle = isGirl ? '#f5d0d8' : '#d4c8b8';
+            ctx.fill();
+            ctx.restore();
+
+            // Right arm
+            ctx.save();
+            ctx.translate(24, bodyY + 18);
+            ctx.rotate(0.6 - armSway * 0.5);
+            ctx.fillStyle = isGirl ? '#f5d0d8' : '#d4c8b8';
+            ctx.beginPath();
+            ctx.roundRect(-4, 0, 8, 34, 4);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(0, 34, 6, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+
+            // ---- Head ----
+            ctx.save();
+            ctx.translate(0, headY);
+
+            // Skin
+            const skinColor = isGirl ? '#fce4e0' : '#f5e0d8';
+            ctx.fillStyle = skinColor;
+            ctx.beginPath();
+            ctx.ellipse(0, 0, 32, 36, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // ---- Hair ----
+            ctx.save();
+            if (isGirl) {
+                // Long flowing hair
+                const hairWave = Math.sin(time * 0.6) * 0.03;
+                // Back hair
+                ctx.fillStyle = '#4a1a2a';
+                ctx.beginPath();
+                ctx.ellipse(0, -4, 34, 38, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Main hair
+                ctx.fillStyle = '#5a2a3a';
+                ctx.beginPath();
+                ctx.moveTo(-30, -10);
+                ctx.quadraticCurveTo(-34, -24, -26, -34);
+                ctx.quadraticCurveTo(-14, -42, 0, -44);
+                ctx.quadraticCurveTo(14, -42, 26, -34);
+                ctx.quadraticCurveTo(34, -24, 30, -10);
+                ctx.quadraticCurveTo(28, 6, 20, 20 + hairWave * 10);
+                ctx.quadraticCurveTo(10, 30 + hairWave * 8, 0, 34 + hairWave * 6);
+                ctx.quadraticCurveTo(-10, 30 + hairWave * 8, -20, 20 + hairWave * 10);
+                ctx.quadraticCurveTo(-28, 6, -30, -10);
+                ctx.closePath();
+                ctx.fill();
+
+                // Hair shine
+                ctx.fillStyle = 'rgba(255,200,200,0.08)';
+                ctx.beginPath();
+                ctx.ellipse(-8, -30, 12, 16, -0.2, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Side hair
+                ctx.fillStyle = '#4a1a2a';
+                ctx.beginPath();
+                ctx.moveTo(-30, -8);
+                ctx.quadraticCurveTo(-34, 2, -28, 14);
+                ctx.quadraticCurveTo(-24, 22, -20, 18);
+                ctx.quadraticCurveTo(-24, 10, -26, -4);
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.beginPath();
+                ctx.moveTo(30, -8);
+                ctx.quadraticCurveTo(34, 2, 28, 14);
+                ctx.quadraticCurveTo(24, 22, 20, 18);
+                ctx.quadraticCurveTo(24, 10, 26, -4);
+                ctx.closePath();
+                ctx.fill();
+
+                // Hair bow/ribbon
+                const bowBob = Math.sin(time * 0.7 + 0.5) * 2;
+                ctx.fillStyle = '#cc2244';
+                ctx.beginPath();
+                ctx.moveTo(0, -42 + bowBob);
+                ctx.quadraticCurveTo(10, -50 + bowBob, 18, -44 + bowBob);
+                ctx.quadraticCurveTo(12, -40 + bowBob, 6, -42 + bowBob);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.moveTo(0, -42 + bowBob);
+                ctx.quadraticCurveTo(-10, -50 + bowBob, -18, -44 + bowBob);
+                ctx.quadraticCurveTo(-12, -40 + bowBob, -6, -42 + bowBob);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(0, -42 + bowBob, 4, 0, Math.PI * 2);
+                ctx.fillStyle = '#ee3355';
+                ctx.fill();
+
+            } else {
+                // Boy hair - short spiky
+                ctx.fillStyle = '#2a2a3a';
+                ctx.beginPath();
+                ctx.moveTo(-28, -10);
+                ctx.quadraticCurveTo(-32, -20, -26, -30);
+                ctx.quadraticCurveTo(-18, -38, -8, -40);
+                ctx.quadraticCurveTo(0, -42, 8, -40);
+                ctx.quadraticCurveTo(18, -38, 26, -30);
+                ctx.quadraticCurveTo(32, -20, 28, -10);
+                ctx.quadraticCurveTo(30, -2, 26, 6);
+                ctx.quadraticCurveTo(20, 14, 12, 16);
+                ctx.quadraticCurveTo(6, 12, 0, 8);
+                ctx.quadraticCurveTo(-6, 12, -12, 16);
+                ctx.quadraticCurveTo(-20, 14, -26, 6);
+                ctx.quadraticCurveTo(-30, -2, -28, -10);
+                ctx.closePath();
+                ctx.fill();
+
+                // Spikes
+                ctx.fillStyle = '#1a1a2a';
+                for (let i = -3; i <= 3; i++) {
+                    const sx = i * 7 + Math.sin(time * 0.5 + i) * 1;
+                    const sy = -34 + Math.abs(i) * 2 + Math.sin(time * 0.6 + i * 0.7) * 1.5;
+                    ctx.beginPath();
+                    ctx.moveTo(sx - 5, sy + 4);
+                    ctx.lineTo(sx, sy - 8);
+                    ctx.lineTo(sx + 5, sy + 4);
+                    ctx.closePath();
+                    ctx.fill();
+                }
+
+                // Hair shine
+                ctx.fillStyle = 'rgba(200,200,255,0.05)';
+                ctx.beginPath();
+                ctx.ellipse(-6, -28, 10, 14, -0.1, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.restore();
+
+            // ---- Eyes ----
+            const eyeY = -4;
+            const eyeSpacing = 16;
+            const blink = Math.sin(time * 2.5) > 0.95 ? 0.1 : 1;
+
+            // Eye white
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.ellipse(-eyeSpacing, eyeY, 9, 11 * blink, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.ellipse(eyeSpacing, eyeY, 9, 11 * blink, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Iris
+            const irisColor = isGirl ? '#6a3a7a' : '#3a5a8a';
+            const irisGrad = ctx.createRadialGradient(
+                -eyeSpacing - 1, eyeY - 1, 1,
+                -eyeSpacing, eyeY, 7
+            );
+            irisGrad.addColorStop(0, isGirl ? '#9a5aaa' : '#5a7aaa');
+            irisGrad.addColorStop(0.7, irisColor);
+            irisGrad.addColorStop(1, '#1a1a2a');
+            ctx.fillStyle = irisGrad;
+            const irisSize = 6.5 * blink;
+            ctx.beginPath();
+            ctx.ellipse(-eyeSpacing, eyeY, irisSize, 8 * blink, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.ellipse(eyeSpacing, eyeY, irisSize, 8 * blink, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Pupil
+            ctx.fillStyle = '#0a0a1a';
+            ctx.beginPath();
+            ctx.arc(-eyeSpacing + 1, eyeY + 1, 3.5 * blink, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(eyeSpacing + 1, eyeY + 1, 3.5 * blink, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Eye shine
+            ctx.fillStyle = 'rgba(255,255,255,0.85)';
+            ctx.beginPath();
+            ctx.arc(-eyeSpacing + 3, eyeY - 3, 2.5 * blink, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(eyeSpacing + 3, eyeY - 3, 2.5 * blink, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = 'rgba(255,255,255,0.3)';
+            ctx.beginPath();
+            ctx.arc(-eyeSpacing + 5, eyeY + 1, 1.2 * blink, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(eyeSpacing + 5, eyeY + 1, 1.2 * blink, 0, Math.PI * 2);
+            ctx.fill();
+
+            // ---- Eyebrows ----
+            ctx.strokeStyle = isGirl ? '#3a1a2a' : '#2a2a3a';
+            ctx.lineWidth = 2.2;
+            ctx.beginPath();
+            ctx.moveTo(-eyeSpacing - 6, eyeY - 15);
+            ctx.quadraticCurveTo(-eyeSpacing, eyeY - 19, -eyeSpacing + 6, eyeY - 15);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(eyeSpacing - 6, eyeY - 15);
+            ctx.quadraticCurveTo(eyeSpacing, eyeY - 19, eyeSpacing + 6, eyeY - 15);
+            ctx.stroke();
+
+            // ---- Mouth ----
+            ctx.strokeStyle = isGirl ? '#cc6a7a' : '#b08a7a';
+            ctx.lineWidth = 1.8;
+            const smile = Math.sin(time * 0.7 + (isGirl ? 0 : 0.8)) * 0.02;
+            ctx.beginPath();
+            ctx.arc(0, 6 + smile * 4, 7 + smile * 2, 0.1, Math.PI - 0.1);
+            ctx.stroke();
+
+            // ---- Blush ----
+            ctx.fillStyle = isGirl ? 'rgba(255,150,150,0.25)' : 'rgba(255,180,160,0.15)';
+            ctx.beginPath();
+            ctx.ellipse(-22, 4, 8, 6, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.ellipse(22, 4, 8, 6, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+
+            // ---- Rose (in left hand area) ----
+            const roseX = -30 + (isGirl ? -2 : 2);
+            const roseY = bodyY + 28 + Math.sin(time * 0.9 + (isGirl ? 0 : 0.7)) * 2;
+            drawRose(ctx, roseX, roseY, 18 + 2 * Math.sin(time * 0.7 + (isGirl ? 0 : 1.2)), time, roseGlow);
+
+            ctx.restore();
+        }
+
+        // ---- Draw a single rose ----
+        function drawRose(ctx, x, y, size, time, glowIntensity) {
+            ctx.save();
+            ctx.translate(x, y);
+
+            const s = size * 0.06;
+            const rot = Math.sin(time * 0.4 + x) * 0.05;
+
+            ctx.rotate(rot);
+
+            // ---- Stem ----
+            ctx.strokeStyle = '#2a5a2a';
+            ctx.lineWidth = 2.5 * s;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.quadraticCurveTo(-5 * s, 10 * s, 2 * s, 22 * s);
+            ctx.stroke();
+
+            // Leaf
+            ctx.fillStyle = '#3a7a3a';
+            ctx.beginPath();
+            ctx.ellipse(-6 * s, 10 * s, 6 * s, 3 * s, -0.4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.ellipse(7 * s, 14 * s, 5 * s, 2.5 * s, 0.4, 0, Math.PI * 2);
+            ctx.fill();
+
+            // ---- Rose bloom ----
+            const glow = 0.6 + 0.4 * glowIntensity;
+
+            // Glow
+            ctx.save();
+            const gradGlow = ctx.createRadialGradient(0, -2 * s, 0, 0, -2 * s, 20 * s * glow);
+            gradGlow.addColorStop(0, `rgba(255,50,50,${0.15 * glow})`);
+            gradGlow.addColorStop(0.5, `rgba(200,30,30,${0.08 * glow})`);
+            gradGlow.addColorStop(1, 'rgba(200,30,30,0)');
+            ctx.fillStyle = gradGlow;
+            ctx.beginPath();
+            ctx.arc(0, -2 * s, 20 * s * glow, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+
+            // Petals - outer
+            const colors = [
+                '#cc2244', '#dd3355', '#ee4466', '#cc1133', '#bb2244'
+            ];
+            const petalCount = 12;
+            for (let i = 0; i < petalCount; i++) {
+                const angle = (i / petalCount) * Math.PI * 2 + time * 0.1;
+                const r = 7 * s + 3 * s * Math.sin(time * 0.5 + i * 0.7);
+                const px = Math.cos(angle) * r;
+                const py = Math.sin(angle) * r * 0.7 - 2 * s;
+                ctx.save();
+                ctx.translate(px, py);
+                ctx.rotate(angle + 0.3);
+                ctx.fillStyle = colors[i % colors.length];
+                ctx.globalAlpha = 0.85 + 0.15 * Math.sin(time * 0.6 + i);
+                ctx.beginPath();
+                ctx.ellipse(0, 0, 5 * s, 7 * s, 0, 0, Math.PI * 2);
+                ctx.fill();
+                // petal highlight
+                ctx.fillStyle = 'rgba(255,200,200,0.15)';
+                ctx.beginPath();
+                ctx.ellipse(-1 * s, -2 * s, 2 * s, 3 * s, 0.2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+
+            // Inner petals
+            for (let i = 0; i < 8; i++) {
+                const angle = (i / 8) * Math.PI * 2 + time * 0.15 + 0.4;
+                const r = 4 * s + 2 * s * Math.sin(time * 0.7 + i * 0.9);
+                const px = Math.cos(angle) * r;
+                const py = Math.sin(angle) * r * 0.6 - 2 * s;
+                ctx.save();
+                ctx.translate(px, py);
+                ctx.rotate(angle + 0.5);
+                ctx.fillStyle = '#dd2244';
+                ctx.globalAlpha = 0.9;
+                ctx.beginPath();
+                ctx.ellipse(0, 0, 3.5 * s, 5 * s, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = 'rgba(255,180,180,0.2)';
+                ctx.beginPath();
+                ctx.ellipse(-0.5 * s, -1.5 * s, 1.5 * s, 2 * s, 0.2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+
+            // Center
+            ctx.fillStyle = '#8a1a2a';
+            ctx.beginPath();
+            ctx.arc(0, -2 * s, 2.5 * s, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = 'rgba(255,200,150,0.2)';
+            ctx.beginPath();
+            ctx.arc(-0.5 * s, -3 * s, 1 * s, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Glow ring
+            ctx.save();
+            ctx.shadowColor = `rgba(255,50,50,${0.2 * glow})`;
+            ctx.shadowBlur = 25 * s * glow;
+            ctx.strokeStyle = `rgba(255,100,100,${0.15 * glow})`;
+            ctx.lineWidth = 1 * s;
+            ctx.beginPath();
+            ctx.arc(0, -2 * s, 10 * s * glow, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+
+            ctx.restore();
+        }
+
+        // ============================================================
+        // BACKGROUND
+        // ============================================================
+
+        function drawBackground(ctx, time) {
+            // Sky gradient - romantic sunset
+            const grad = ctx.createLinearGradient(0, 0, 0, H);
+            const t = (Math.sin(time * 0.02) + 1) * 0.15;
+            grad.addColorStop(0, `rgb(${20 + t * 20}, ${8 + t * 8}, ${30 + t * 30})`);
+            grad.addColorStop(0.3, `rgb(${60 + t * 20}, ${20 + t * 10}, ${50 + t * 20})`);
+            grad.addColorStop(0.6, `rgb(${100 + t * 15}, ${40 + t * 10}, ${60 + t * 15})`);
+            grad.addColorStop(0.8, `rgb(${140 + t * 10}, ${70 + t * 10}, ${70 + t * 10})`);
+            grad.addColorStop(1, `rgb(${60 + t * 10}, ${30 + t * 5}, ${40 + t * 10})`);
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, W, H);
+
+            // Stars
+            const stars = [
+                [120, 40, 0.8],
+                [250, 80, 0.6],
+                [400, 30, 1],
+                [560, 60, 0.7],
+                [700, 45, 0.9],
+                [820, 70, 0.5],
+                [50, 120, 0.6],
+                [350, 140, 0.4],
+                [650, 130, 0.7],
+                [850, 110, 0.5],
+                [170, 170, 0.3],
+                [480, 160, 0.6],
+                [750, 180, 0.4],
+            ];
+            for (const [sx, sy, brightness] of stars) {
+                const twinkle = 0.5 + 0.5 * Math.sin(time * 0.5 + sx);
+                ctx.globalAlpha = brightness * twinkle * 0.7;
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(sx, sy, 1.2 + twinkle * 0.5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.globalAlpha = 1;
+
+            // Moon
+            ctx.save();
+            ctx.shadowColor = 'rgba(255,220,200,0.15)';
+            ctx.shadowBlur = 60;
+            ctx.fillStyle = 'rgba(255,235,220,0.12)';
+            ctx.beginPath();
+            ctx.arc(W - 120, 80, 50, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = 'rgba(255,240,230,0.08)';
+            ctx.beginPath();
+            ctx.arc(W - 115, 75, 40, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+
+            // Ground
+            const groundY = H - 80;
+            const gradGround = ctx.createLinearGradient(0, groundY, 0, H);
+            gradGround.addColorStop(0, 'rgba(30,20,30,0.6)');
+            gradGround.addColorStop(0.3, 'rgba(40,25,35,0.7)');
+            gradGround.addColorStop(1, 'rgba(20,12,20,0.9)');
+            ctx.fillStyle = gradGround;
+            ctx.beginPath();
+            ctx.moveTo(0, groundY);
+            for (let x = 0; x <= W; x += 2) {
+                const wave = Math.sin(x * 0.02 + time * 0.3) * 4 +
+                    Math.sin(x * 0.04 + time * 0.5 + 1) * 2;
+                ctx.lineTo(x, groundY + wave);
+            }
+            ctx.lineTo(W, H);
+            ctx.lineTo(0, H);
+            ctx.closePath();
+            ctx.fill();
+
+            // Grass details
+            for (let i = 0; i < 80; i++) {
+                const gx = (i / 80) * W + Math.sin(i * 0.5 + time * 0.2) * 8;
+                const gy = groundY + 2 + Math.sin(gx * 0.03 + time * 0.4) * 4 +
+                    Math.sin(i * 0.7 + time * 0.6) * 2;
+                const gh = 6 + Math.sin(i * 0.9 + time) * 3;
+                ctx.strokeStyle = `rgba(80,50,60,${0.2 + 0.15 * Math.sin(i + time)})`;
+                ctx.lineWidth = 1.2;
+                ctx.beginPath();
+                ctx.moveTo(gx, gy);
+                ctx.quadraticCurveTo(gx + Math.sin(i + time * 0.5) * 3, gy - gh, gx + Math.sin(i * 0.7 + time * 0.8) * 5, gy -
+                    gh * 0.8);
+                ctx.stroke();
+            }
+        }
+
+        // ============================================================
+        // ROUND RECT POLYFILL FOR CANVAS
+        // ============================================================
+        if (!CanvasRenderingContext2D.prototype.roundRect) {
+            CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+                if (r > w / 2) r = w / 2;
+                if (r > h / 2) r = h / 2;
+                this.moveTo(x + r, y);
+                this.arcTo(x + w, y, x + w, y + h, r);
+                this.arcTo(x + w, y + h, x, y + h, r);
+                this.arcTo(x, y + h, x, y, r);
+                this.arcTo(x, y, x + w, y, r);
+                return this;
+            };
+        }
+
+        // ============================================================
+        // SCENE SETUP
+        // ============================================================
+
+        const petals = Array.from({ length: 45 }, () => new Petal());
+        const hearts = Array.from({ length: 18 }, () => new HeartParticle());
+        const sparkles = Array.from({ length: 30 }, () => new Sparkle());
+
+        let mouseX = W / 2;
+        let mouseY = H / 2;
+        let clickEffect = 0;
+        let clickParticles = [];
+
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const sx = (e.clientX - rect.left) / rect.width;
+            const sy = (e.clientY - rect.top) / rect.height;
+            mouseX = sx * W;
+            mouseY = sy * H;
+        });
+
+        canvas.addEventListener('click', (e) => {
+            clickEffect = 1;
+            const rect = canvas.getBoundingClientRect();
+            const sx = (e.clientX - rect.left) / rect.width;
+            const sy = (e.clientY - rect.top) / rect.height;
+            const cx = sx * W;
+            const cy = sy * H;
+            for (let i = 0; i < 30; i++) {
+                clickParticles.push({
+                    x: cx,
+                    y: cy,
+                    vx: rand(-4, 4),
+                    vy: rand(-6, 0),
+                    life: rand(40, 80),
+                    maxLife: 80,
+                    size: rand(3, 8),
+                    hue: randInt(330, 360),
+                    type: randInt(0, 2)
+                });
+            }
+            // Spawn extra hearts
+            for (let i = 0; i < 6; i++) {
+                const h = new HeartParticle();
+                h.x = cx + rand(-40, 40);
+                h.y = cy + rand(-40, 40);
+                h.speedX = rand(-1.5, 1.5);
+                h.speedY = rand(-2.5, -0.8);
+                h.size = rand(8, 20);
+                hearts.push(h);
+            }
+            setTimeout(() => { clickEffect = 0; }, 500);
+        });
+
+        // ============================================================
+        // MAIN ANIMATION LOOP
+        // ============================================================
+
+        function animate(time) {
+            const t = time / 1000;
+
+            // --- Update ---
+            for (const p of petals) p.update();
+            for (const h of hearts) h.update();
+            for (const s of sparkles) s.update();
+
+            // Click particles
+            for (let i = clickParticles.length - 1; i >= 0; i--) {
+                const p = clickParticles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 0.06;
+                p.life--;
+                if (p.life < 0) clickParticles.splice(i, 1);
+            }
+
+            // Cleanup extra hearts
+            while (hearts.length > 40) hearts.shift();
+
+            // --- Draw ---
+            ctx.clearRect(0, 0, W, H);
+
+            drawBackground(ctx, t);
+
+            // ---- Draw sparkles (background layer) ----
+            for (const s of sparkles) s.draw(ctx);
+
+            // ---- Draw characters ----
+            const girlX = W / 2 - 80;
+            const boyX = W / 2 + 80;
+            const baseY = H - 90;
+
+            // Floating effect
+            const floatY = Math.sin(t * 0.5) * 3;
+            const floatY2 = Math.sin(t * 0.5 + 1.2) * 3;
+
+            // Rose glow intensity based on mouse proximity
+            const glow1 = 0.6 + 0.4 * (1 - Math.min(1, dist(mouseX, mouseY, girlX - 30, baseY + 20) / 300));
+            const glow2 = 0.6 + 0.4 * (1 - Math.min(1, dist(mouseX, mouseY, boyX + 30, baseY + 20) / 300));
+
+            // Draw girl (facing right)
+            drawCharacter(ctx, girlX, baseY + floatY, 1, true, t, glow1);
+
+            // Draw boy (facing left)
+            drawCharacter(ctx, boyX, baseY + floatY2, -1, false, t, glow2);
+
+            // ---- Draw hearts (foreground) ----
+            for (const h of hearts) h.draw(ctx);
+
+            // ---- Draw petals (foreground) ----
+            for (const p of petals) p.draw(ctx);
+
+            // ---- Click particles ----
+            for (const p of clickParticles) {
+                const alpha = p.life / p.maxLife;
+                ctx.save();
+                ctx.globalAlpha = alpha;
+                ctx.translate(p.x, p.y);
+                const s = p.size;
+                ctx.fillStyle = `hsla(${p.hue}, 100%, 70%, ${alpha})`;
+                if (p.type === 0) {
+                    ctx.beginPath();
+                    ctx.arc(0, 0, s, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (p.type === 1) {
+                    ctx.beginPath();
+                    for (let i = 0; i < 6; i++) {
+                        const a = (i / 6) * Math.PI * 2 - Math.PI / 2;
+                        const r = i % 2 === 0 ? s : s * 0.4;
+                        i === 0 ? ctx.moveTo(Math.cos(a) * r, Math.sin(a) * r) :
+                            ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+                    }
+                    ctx.closePath();
+                    ctx.fill();
+                } else {
+                    // heart
+                    ctx.scale(0.4, 0.4);
+                    ctx.beginPath();
+                    ctx.moveTo(0, s * 0.3);
+                    ctx.bezierCurveTo(-s * 0.5, -s * 0.4, -s * 0.9, s * 0.1, 0, s * 0.8);
+                    ctx.bezierCurveTo(s * 0.9, s * 0.1, s * 0.5, -s * 0.4, 0, s * 0.3);
+                    ctx.closePath();
+                    ctx.fill();
+                }
+                ctx.restore();
+            }
+
+            // ---- Vignette ----
+            const vignette = ctx.createRadialGradient(W / 2, H / 2, H * 0.3, W / 2, H / 2, H * 0.9);
+            vignette.addColorStop(0, 'rgba(0,0,0,0)');
+            vignette.addColorStop(1, 'rgba(0,0,0,0.4)');
+            ctx.fillStyle = vignette;
+            ctx.fillRect(0, 0, W, H);
+
+            // ---- Click effect overlay ----
+            if (clickEffect > 0) {
+                ctx.save();
+                ctx.globalAlpha = clickEffect * 0.15;
+                ctx.fillStyle = '#ff4466';
+                ctx.beginPath();
+                ctx.arc(mouseX, mouseY, 80 + 40 * (1 - clickEffect), 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+                clickEffect *= 0.97;
+                if (clickEffect < 0.01) clickEffect = 0;
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        // ============================================================
+        // START
+        // ============================================================
+
+        requestAnimationFrame(animate);
+
+        // Handle resize properly
+        window.addEventListener('resize', () => {
+            resize();
+        });
+    </script>
+</body>
+</html>
